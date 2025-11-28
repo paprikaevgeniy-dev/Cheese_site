@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра: Открытие Банка</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #0056b3;
+            text-align: center;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+        }
+        #game-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        #story {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+            background-color: #e9f7ff;
+        }
+        .option-button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .option-button:hover {
+            background-color: #0056b3;
+        }
+        .restart-button {
+            background-color: #28a745;
+        }
+        .restart-button:hover {
+            background-color: #1e7e34;
+        }
+        .result-fail {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .result-success {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>💰 Игра: Открытие Банка 💰</h1>
+    <div id="game-container">
+        <div id="story">Нажмите "Начать игру", чтобы начать свой путь банкира.</div>
+        <div id="options">
+            <button class="option-button" onclick="startGame()">Начать игру</button>
+        </div>
+    </div>
+
+    <script>
+        // Объект с этапами игры
+        const gameStages = {
+            start: {
+                text: "Вы — амбициозный предприниматель, решивший открыть свой банк. С чего начнем? Главное — это...",
+                options: [
+                    { text: "Найти крупный капитал для старта", next: "capital" },
+                    { text: "Придумать броское название", next: "name" },
+                ]
+            },
+            capital: {
+                text: "Вы нашли инвесторов! Теперь нужно решить, на чем будет специализироваться ваш банк. Какова ваша ниша?",
+                options: [
+                    { text: "Кредиты малому бизнесу (риск, но высокая доходность)", next: "niche_business" },
+                    { text: "Привлечение вкладов населения (стабильность, но низкая маржа)", next: "niche_deposit" },
+                ]
+            },
+            name: {
+                text: "Название 'Гранд Финанс' звучит отлично! Но без капитала и стратегии регулятор не даст лицензию. Вы провалили первый шаг.",
+                options: [
+                    { text: "Начать заново", next: "start" },
+                ],
+                fail: true
+            },
+            niche_business: {
+                text: "Ваша стратегия: рискованные, но высокодоходные кредиты. Вы получаете лицензию! Однако, через год половина заемщиков не смогла расплатиться. Вы сталкиваетесь с кризисом ликвидности. Что делать?",
+                options: [
+                    { text: "Срочно продать часть активов, чтобы закрыть дыру", next: "crisis_sell" },
+                    { text: "Попросить помощи у Центрального Банка", next: "crisis_cb" },
+
+potato, [11/28/2025 6:48 PM]
+]
+            },
+            niche_deposit: {
+                text: "Ваша стратегия: надежный, консервативный банк для вкладчиков. Вы получаете лицензию! Через год вы успешны и стабильны. Вам нужно расширяться. Каков ваш следующий шаг?",
+                options: [
+                    { text: "Открыть филиалы в каждом городе", next: "expansion_city" },
+                    { text: "Развивать мобильное приложение и онлайн-сервисы", next: "expansion_online" },
+                ]
+            },
+            crisis_sell: {
+                text: "Продажа активов помогла, но подорвала доверие клиентов. Начался отток вкладов. Вам приходится закрыть банк.",
+                options: [
+                    { text: "Начать заново", next: "start" },
+                ],
+                fail: true
+            },
+            crisis_cb: {
+                text: "Центральный Банк отказывает в помощи, указывая на изначально высокую рискованность вашей стратегии. Ваш банк ликвидирован.",
+                options: [
+                    { text: "Начать заново", next: "start" },
+                ],
+                fail: true
+            },
+            expansion_city: {
+                text: "Слишком быстрое и дорогое расширение. Вы не справляетесь с расходами. Банк становится нерентабельным.",
+                options: [
+                    { text: "Начать заново", next: "start" },
+                ],
+                fail: true
+            },
+            expansion_online: {
+                text: "✅ ПОЗДРАВЛЯЕМ! Вы приняли мудрое решение, инвестировав в технологии. Ваш банк стал лидером рынка по удобству и надежности! Вы успешно открыли и развили банк!",
+                options: [
+                    { text: "Начать новую игру", next: "start" },
+                ],
+                success: true
+            }
+        };
+
+        const storyDiv = document.getElementById('story');
+        const optionsDiv = document.getElementById('options');
+
+        // Текущий этап игры
+        let currentStage = 'start';
+
+        // Функция для отображения текущего этапа
+        function showStage(stageKey) {
+            currentStage = stageKey;
+            const stage = gameStages[stageKey];
+
+            // Обновляем текст истории
+            storyDiv.innerHTML = stage.text;
+            
+            // Если это успешный или провальный финал, добавляем соответствующий класс
+            if (stage.success) {
+                storyDiv.className = 'result-success';
+            } else if (stage.fail) {
+                storyDiv.className = 'result-fail';
+            } else {
+                storyDiv.className = '';
+            }
+
+            // Очищаем и добавляем новые кнопки
+            optionsDiv.innerHTML = '';
+            stage.options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option.text;
+                button.className = 'option-button';
+                
+                // Добавляем класс для рестарта, чтобы кнопка выглядела иначе
+                if (option.next === 'start') {
+                    button.classList.add('restart-button');
+                }
+
+                // Логика перехода к следующему этапу
+                button.onclick = () => showStage(option.next);
+                optionsDiv.appendChild(button);
+            });
+        }
+
+        // Функция запуска игры (просто показывает начальный этап)
+        function startGame() {
+            showStage('start');
+        }
+
+        // Запускаем игру при загрузке
+        startGame(); 
+    </script>
+
+</body>
+</html>
