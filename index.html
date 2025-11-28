@@ -1,279 +1,311 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Year's Countdown Challenge</title>
-    <link rel="stylesheet" href="style.css">
+    <title>New Year Snowflake Collector</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #1a2a6c, #b21f1f, #fdbb2d); /* New Year's gradient */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            color: white;
+            position: relative;
+        }
+        #game-container {
+            position: relative;
+            width: 800px; /* Game area width */
+            height: 600px; /* Game area height */
+            background-color: rgba(0, 0, 0, 0.4); /* Semi-transparent background for game area */
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+            overflow: hidden;
+            border: 5px solid gold; /* Festive border */
+        }
+        #player {
+            position: absolute;
+            bottom: 20px;
+            left: calc(50% - 30px);
+            width: 60px;
+            height: 60px;
+            background-color: #ffb703; /* Golden collector */
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            color: #333;
+            animation: pulse 1.5s infinite alternate;
+            z-index: 10;
+        }
+        #player::before {
+            content: '✨';
+            position: absolute;
+        }
+        .snowflake {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            opacity: 0.8;
+            pointer-events: none;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+            animation: fall linear infinite;
+            z-index: 5;
+        }
+        .snowflake::before {
+            content: '❄️'; /* Snowflake emoji */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2em;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 2.5em;
+            font-weight: bold;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+            color: #ffd700; /* Gold score */
+            z-index: 15;
+        }
+        #countdown {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2.5em;
+            font-weight: bold;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+            color: #ffd700; /* Gold countdown */
+            z-index: 15;
+        }
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 3em;
+            text-align: center;
+            z-index: 20;
+            color: #ffd700;
+        }
+        #game-over-screen h2 {
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 7px rgba(255, 255, 255, 0.7);
+        }
+        #final-score {
+            font-size: 2em;
+            margin-bottom: 30px;
+            color: white;
+        }
+        #restart-button {
+            padding: 15px 30px;
+            font-size: 1.5em;
+            cursor: pointer;
+            background-color: #4CAF50; /* Green button */
+            color: white;
+            border: none;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+        }
+        #restart-button:hover {
+            background-color: #45a049;
+        }
+
+        /* Keyframe animations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        @keyframes fall {
+            from { transform: translateY(-20px); opacity: 0.8; }
+            to { transform: translateY(620px); opacity: 0; }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>New Year's Countdown Challenge!</h1>
-        <div id="countdown"></div>
-        <button id="startButton">Start Game</button>
-        <div id="gameArea" class="hidden">
-            <p>Solve the riddle before time runs out!</p>
-            <div id="riddle"></div>
-            <input type="text" id="answerInput" placeholder="Your answer...">
-            <button id="submitAnswer">Submit</button>
-            <p id="message"></p>
-        </div>
-        <div id="result" class="hidden">
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="score">Score: 0</div>
+        <div id="countdown">Time: XXX</div>
+
+        <div id="game-over-screen">
             <h2>Happy New Year!</h2>
-            <p>You did it!</p>
-            <button id="resetButton">Play Again</button>
+            <div id="final-score">Your Score: 0</div>
+            <button id="restart-button">Play Again!</button>
         </div>
     </div>
-    <script src="script.js"></script>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const player = document.getElementById('player');
+        const scoreDisplay = document.getElementById('score');
+        const countdownDisplay = document.getElementById('countdown');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-button');
+
+        let score = 0;
+        let playerX = gameContainer.offsetWidth / 2 - player.offsetWidth / 2;
+        let snowflakes = [];
+        let gameTime = 60; // seconds
+        let countdownInterval;
+        let gameInterval;
+        let snowflakeSpawnInterval;
+        let isGameOver = false;
+
+        const playerSpeed = 10; // Pixels per frame for player movement
+        const snowflakeSizeMin = 20;
+        const snowflakeSizeMax = 40;
+        const snowflakeSpeedMin = 1;
+        const snowflakeSpeedMax = 3;
+        const spawnRate = 700; // Milliseconds between snowflake spawns
+
+        function initializeGame() {
+            score = 0;
+            gameTime = 60;
+            isGameOver = false;
+            scoreDisplay.textContent = 'Score: 0';
+            countdownDisplay.textContent = `Time: ${gameTime}`;
+            gameOverScreen.style.display = 'none';
+            playerX = gameContainer.offsetWidth / 2 - player.offsetWidth / 2;
+            player.style.left = `${playerX}px`;
+
+            // Clear existing snowflakes
+            snowflakes.forEach(snowflake => snowflake.remove());
+            snowflakes = [];
+
+            startGameLoops();
+        }
+
+        function startGameLoops() {
+            // Countdown Timer
+            countdownInterval = setInterval(() => {
+                gameTime--;
+                countdownDisplay.textContent = `Time: ${gameTime}`;
+                if (gameTime <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // Snowflake Spawner
+            snowflakeSpawnInterval = setInterval(createSnowflake, spawnRate);
+
+            // Game Update Loop
+            gameInterval = setInterval(updateGame, 1000 / 60); // 60 frames per second
+        }
+
+        function createSnowflake() {
+            if (isGameOver) return;
+
+            const snowflake = document.createElement('div');
+            snowflake.classList.add('snowflake');
+            const size = Math.random() * (snowflakeSizeMax - snowflakeSizeMin) + snowflakeSizeMin;
+            snowflake.style.width = `${size}px`;
+            snowflake.style.height = `${size}px`;
+            snowflake.style.left = `${Math.random() * (gameContainer.offsetWidth - size)}px`;
+            snowflake.style.top = `-50px`; // Start above the screen
+            snowflake.dataset.speed = Math.random() * (snowflakeSpeedMax - snowflakeSpeedMin) + snowflakeSpeedMin;
+            snowflake.dataset.value = Math.floor(size / 10); // Bigger snowflakes, more points
+            
+            gameContainer.appendChild(snowflake);
+            snowflakes.push(snowflake);
+        }
+
+        function updateGame() {
+            if (isGameOver) return;
+
+            // Move and check snowflakes
+            snowflakes.forEach((snowflake, index) => {
+                let currentTop = parseFloat(snowflake.style.top);
+                snowflake.style.top = `${currentTop + parseFloat(snowflake.dataset.speed)}px`;
+
+                // Check for collision with player
+                if (checkCollision(player, snowflake)) {
+                    score += parseInt(snowflake.dataset.value);
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    snowflake.remove();
+                    snowflakes.splice(index, 1);
+                } else if (currentTop > gameContainer.offsetHeight) {
+                    // Snowflake missed, remove it
+                    snowflake.remove();
+                    snowflakes.splice(index, 1);
+                }
+            });
+        }
+
+        function checkCollision(element1, element2) {
+            const rect1 = element1.getBoundingClientRect();
+            const rect2 = element2.getBoundingClientRect();
+            const containerRect = gameContainer.getBoundingClientRect();
+
+            // Adjust rects to be relative to the game-container
+            const p1 = {
+                left: rect1.left - containerRect.left,
+                right: rect1.right - containerRect.left,
+                top: rect1.top - containerRect.top,
+                bottom: rect1.bottom - containerRect.top
+            };
+            const p2 = {
+                left: rect2.left - containerRect.left,
+                right: rect2.right - containerRect.left,
+                top: rect2.top - containerRect.top,
+                bottom: rect2.bottom - containerRect.top
+            };
+
+            return !(p1.right < p2.left || 
+                     p1.left > p2.right || 
+                     p1.bottom < p2.top || 
+                     p1.top > p2.bottom);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            clearInterval(countdownInterval);
+            clearInterval(snowflakeSpawnInterval);
+            clearInterval(gameInterval);
+
+            finalScoreDisplay.textContent = `Your Score: ${score}`;
+            gameOverScreen.style.display = 'flex';
+        }
+
+        // Player movement with arrow keys
+        document.addEventListener('keydown', (e) => {
+            if (isGameOver) return;
+
+            const playerWidth = player.offsetWidth;
+            const containerWidth = gameContainer.offsetWidth;
+
+            if (e.key === 'ArrowLeft') {
+                playerX -= playerSpeed;
+            } else if (e.key === 'ArrowRight') {
+                playerX += playerSpeed;
+            }
+
+            // Keep player within bounds
+            playerX = Math.max(0, Math.min(playerX, containerWidth - playerWidth));
+            player.style.left = `${playerX}px`;
+        });
+
+        // Restart button functionality
+        restartButton.addEventListener('click', initializeGame);
+
+        // Initial game setup
+        initializeGame();
+    </script>
 </body>
 </html>
-CSS (style.css)
-body {
-    font-family: 'Arial', sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: linear-gradient(to right, #f7d794, #fcbb6d);
-    color: #333;
-    margin: 0;
-    overflow: hidden;
-    position: relative;
-}
-
-body::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: url('XXX') no-repeat center center/cover; /* Placeholder for a festive background image */
-    opacity: 0.2;
-    z-index: -1;
-}
-
-.container {
-    background-color: rgba(255, 255, 255, 0.95);
-    padding: 40px 60px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    text-align: center;
-    max-width: 600px;
-    width: 90%;
-    position: relative;
-    z-index: 1;
-}
-
-h1 {
-    color: #e67e22;
-    margin-bottom: 30px;
-    font-size: 2.5em;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-}
-
-#countdown {
-    font-size: 3em;
-    font-weight: bold;
-    color: #c0392b;
-    margin-bottom: 30px;
-    letter-spacing: 2px;
-}
-
-button {
-    background-color: #27ae60;
-    color: white;
-    border: none;
-    padding: 15px 30px;
-    font-size: 1.2em;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    margin: 10px;
-}
-
-button:hover {
-    background-color: #2ecc71;
-    transform: translateY(-2px);
-}
-
-button:active {
-    transform: translateY(0);
-}
-
-.hidden {
-    display: none;
-}
-
-#gameArea p {
-    font-size: 1.1em;
-    margin-bottom: 20px;
-    color: #555;
-}
-
-#riddle {
-    font-size: 1.3em;
-    font-weight: bold;
-    color: #2c3e50;
-    margin-bottom: 25px;
-    min-height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#answerInput {
-    width: calc(100% - 40px);
-    padding: 15px;
-    margin-bottom: 20px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    font-size: 1.1em;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-}
-
-#answerInput:focus {
-    border-color: #e67e22;
-    outline: none;
-}
-
-#message {
-    margin-top: 20px;
-    font-weight: bold;
-    font-size: 1.1em;
-}
-
-#result h2 {
-    color: #27ae60;
-    font-size: 3em;
-    margin-bottom: 20px;
-}
-
-#result p {
-    font-size: 1.5em;
-    color: #34495e;
-}
-JavaScript (script.js)
-document.addEventListener('DOMContentLoaded', () => {
-    const countdownDisplay = document.getElementById('countdown');
-    const startButton = document.getElementById('startButton');
-    const gameArea = document.getElementById('gameArea');
-    const riddleDisplay = document.getElementById('riddle');
-    const answerInput = document.getElementById('answerInput');
-    const submitButton = document.getElementById('submitAnswer');
-    const messageDisplay = document.getElementById('message');
-    const resultDisplay = document.getElementById('result');
-    const resetButton = document.getElementById('resetButton');
-
-    let countdownInterval;
-    let gameTimer;
-    let currentRiddle = {};
-    const gameDuration = 10; // seconds for the game timer
-
-    const riddles = [
-        {
-            riddle: "I have cities, but no houses; forests, but no trees; and water, but no fish. What am I?",
-            answer: "map"
-        },
-        {
-            riddle: "What has an eye, but cannot see?",
-            answer: "needle"
-        },
-        {
-            riddle: "What is full of holes but still holds water?",
-            answer: "sponge"
-        },
-        {
-            riddle: "What belongs to you but others use it more than you do?",
-            answer: "your name"
-        },
-        {
-            riddle: "I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?",
-            answer: "echo"
-        }
-    ];
-
-    function startCountdown() {
-        const newYear = new Date(`January 1, ${new Date().getFullYear() + 1} 00:00:00`).getTime();
-
-        countdownInterval = setInterval(() => {
-            const now = new Date().getTime();
-            const distance = newYear - now;
-
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-            countdownDisplay.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-
-            if (distance < 0) {
-                clearInterval(countdownInterval);
-                countdownDisplay.innerHTML = "Happy New Year!";
-                startButton.classList.remove('hidden'); // Show start button after countdown
-            }
-        }, 1000);
-    }
-
-    function startGame() {
-        clearInterval(countdownInterval); // Stop the New Year countdown
-        startButton.classList.add('hidden');
-        gameArea.classList.remove('hidden');
-        resultDisplay.classList.add('hidden');
-        answerInput.value = '';
-        messageDisplay.textContent = '';
-        startRiddleGame();
-    }
-
-    function startRiddleGame() {
-        currentRiddle = riddles[Math.floor(Math.random() * riddles.length)];
-        riddleDisplay.textContent = currentRiddle.riddle;
-        messageDisplay.textContent = `Time left: ${gameDuration}s`;
-
-        let timeLeft = gameDuration;
-        gameTimer = setInterval(() => {
-            timeLeft--;
-            messageDisplay.textContent = `Time left: ${timeLeft}s`;
-            if (timeLeft <= 0) {
-                clearInterval(gameTimer);
-                messageDisplay.textContent = "Time's up! You failed.";
-                setTimeout(resetGame, 2000); // Reset after 2 seconds
-            }
-        }, 1000);
-    }
-
-    function checkAnswer() {
-        const userAnswer = answerInput.value.trim().toLowerCase();
-        if (userAnswer === currentRiddle.answer) {
-            clearInterval(gameTimer);
-            messageDisplay.textContent = "Correct! You've won the New Year's Challenge!";
-            gameArea.classList.add('hidden');
-            resultDisplay.classList.remove('hidden');
-        } else {
-            messageDisplay.textContent = "Incorrect, try again!";
-            answerInput.value = '';
-        }
-    }
-
-    function resetGame() {
-        gameArea.classList.add('hidden');
-        resultDisplay.classList.add('hidden');
-        startButton.classList.remove('hidden');
-        messageDisplay.textContent = '';
-        countdownDisplay.innerHTML = ''; // Clear previous countdown message
-        startCountdown(); // Restart the New Year countdown
-    }
-
-    startButton.addEventListener('click', startGame);
-    submitButton.addEventListener('click', checkAnswer);
-    answerInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            checkAnswer();
-        }
-    });
-    resetButton.addEventListener('click', resetGame);
-
-    // Initialize the countdown when the page loads
-    startCountdown();
-});
